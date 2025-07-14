@@ -1,0 +1,8 @@
+openai
+requests
+moviepy
+gTTS
+google-api-python-client
+python-dotenv
+pytrends
+feedparser
