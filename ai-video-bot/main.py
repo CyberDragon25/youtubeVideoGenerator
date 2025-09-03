@@ -5,8 +5,8 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from scripts.trending import get_trending_topic_from_rss as get_trending_topic
 from scripts.text_to_speech import text_to_speech
-from scripts.video_generator import generate_video
-
+# from scripts.video_generator import generate_video
+from scripts.video_generator import generate_video_from_script
 
 
 load_dotenv()
@@ -35,12 +35,13 @@ if __name__ == "__main__":
     
     # convert to mp3
     text_to_speech(script)
-    os.system("afplay data/voiceover.mp3")
+    # os.system("afplay data/voiceover.mp3")
 
     # Convert to audio
-    text_to_speech(script)
+    # text_to_speech(script)
 
     # Generate video with text overlay and voiceover
-    generate_video(audio_path="data/voiceover.mp3", text=script)
+    generate_video_from_script(script)
+
 
 

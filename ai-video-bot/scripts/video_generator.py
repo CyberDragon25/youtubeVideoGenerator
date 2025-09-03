@@ -1,27 +1,54 @@
 # scripts/video_generator.py
 
-import moviepy.editor as mp
+from scripts.image_generator import generate_image_from_prompt
+
+from moviepy.editor import *
+from gtts import gTTS
 import os
+os.environ["IMAGEMAGICK_BINARY"] = "/usr/local/bin/convert"  # or whatever `which convert` gives
 
-def generate_video(audio_path="data/voiceover.mp3", text="", output_path="data/video.mp4"):
-    # Load audio
-    audio = mp.AudioFileClip(audio_path)
+import re
+import uuid
 
-    # Create a blank background clip (black, white, or custom image)
-    video = mp.ColorClip(size=(1280, 720), color=(10, 10, 10), duration=audio.duration)
+def split_script_into_sentences(script):
+    # Basic split on punctuation
+    return re.split(r'(?<=[.!?])\s+', script.strip())
 
-    # Set audio
-    video = video.set_audio(audio)
+def text_to_speech(text, filename):
+    tts = gTTS(text=text, lang='en')
+    tts.save(filename)
 
-    # Create text overlay
-    txt_clip = mp.TextClip(text, fontsize=40, color='white', font='Arial-Bold', size=(1200, None), method='caption')
-    txt_clip = txt_clip.set_position('center').set_duration(audio.duration)
+def generate_video_from_script(script, output_path="data/final_video.mp4"):
+    sentences = split_script_into_sentences(script)
+    clips = []
 
-    # Composite text on video
-    final = mp.CompositeVideoClip([video, txt_clip])
+    os.makedirs("data/scenes", exist_ok=True)
 
-    # Export video
+    for i, sentence in enumerate(sentences):
+        if len(sentence.strip()) == 0:
+            continue
+
+        print(f"[🎬] Generating scene {i+1}: \"{sentence}\"")
+
+        # 1. Generate audio
+        audio_path = f"data/scenes/scene_{i}.mp3"
+        text_to_speech(sentence, audio_path)
+        audio = AudioFileClip(audio_path)
+
+        # 2. Generate image with DALLE
+        image_path = generate_image_from_prompt(sentence, i)
+        img_clip = ImageClip(image_path).set_duration(audio.duration).resize((1280, 720))
+
+
+        # 3. Text overlay
+        txt = TextClip(sentence, fontsize=40, color='white', size=(1200, None), method='caption')
+        txt = txt.set_position("center").set_duration(audio.duration)
+
+        # 4. Combine
+        scene = CompositeVideoClip([img_clip, txt]).set_audio(audio)
+        clips.append(scene)
+
+    final = concatenate_videoclips(clips, method="compose")
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     final.write_videofile(output_path, fps=24)
-
-    print(f"[✅] Video saved to {output_path}")
+    print(f"[✅] Final video saved to {output_path}")
